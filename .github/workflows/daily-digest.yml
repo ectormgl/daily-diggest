@@ -50,6 +50,9 @@ jobs:
           EVOLUTION_INSTANCE: ${{ secrets.EVOLUTION_INSTANCE }}
           EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
           WHATSAPP_RECIPIENT_NUMBER: ${{ secrets.WHATSAPP_RECIPIENT_NUMBER }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS }}
+          MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE }}
         run: python -m src.main
 
       - name: Dry run (fetch + report only)
