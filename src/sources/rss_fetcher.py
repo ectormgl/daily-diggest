@@ -1,4 +1,5 @@
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import feedparser
@@ -8,6 +9,10 @@ from dateutil import parser as dateparser
 REQUEST_TIMEOUT = 10
 MAX_WORKERS = 10
 USER_AGENT = "daily-diggest/1.0 (+https://github.com/ectormgl/daily-diggest)"
+
+
+def _log(msg: str) -> None:
+    print(f"[rss_fetcher] {msg}", flush=True)
 
 
 def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
@@ -43,17 +48,25 @@ def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
             })
         return articles
     except Exception as e:
-        print(f"[rss_fetcher] Failed to fetch {url}: {e}", file=sys.stderr)
+        print(f"[rss_fetcher] Failed to fetch {url}: {e}", file=sys.stderr, flush=True)
         return []
 
 
 def fetch_all_feeds(sources: list[dict]) -> list[dict]:
     all_articles = []
+    total = len(sources)
+    completed = 0
+    t0 = time.time()
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = [
-            executor.submit(fetch_feed, s["url"], s["name"], s.get("priority", False))
+        future_to_name = {
+            executor.submit(fetch_feed, s["url"], s["name"], s.get("priority", False)): s["name"]
             for s in sources
-        ]
-        for future in as_completed(futures):
-            all_articles.extend(future.result())
+        }
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
+            articles = future.result()
+            all_articles.extend(articles)
+            completed += 1
+            if completed % 10 == 0 or completed == total:
+                _log(f"  progress {completed}/{total} feeds ({time.time()-t0:.1f}s elapsed)")
     return all_articles

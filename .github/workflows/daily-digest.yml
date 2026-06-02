@@ -41,6 +41,7 @@ jobs:
       - name: Run digest
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
+          PYTHONUNBUFFERED: "1"
           GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

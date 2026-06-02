@@ -1,4 +1,5 @@
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
@@ -47,6 +48,9 @@ def fetch_repo_releases(owner: str, repo: str, token: str | None, max_releases: 
 
 def fetch_all_releases(repos: list[dict], token: str | None) -> list[dict]:
     all_articles = []
+    total = len(repos)
+    completed = 0
+    t0 = time.time()
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = [
             executor.submit(fetch_repo_releases, r["owner"], r["repo"], token)
@@ -54,4 +58,7 @@ def fetch_all_releases(repos: list[dict], token: str | None) -> list[dict]:
         ]
         for future in as_completed(futures):
             all_articles.extend(future.result())
+            completed += 1
+            if completed % 5 == 0 or completed == total:
+                print(f"[github_releases]   progress {completed}/{total} repos ({time.time()-t0:.1f}s)", flush=True)
     return all_articles

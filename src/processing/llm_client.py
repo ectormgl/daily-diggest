@@ -44,7 +44,8 @@ def call_llm(
         "X-Title": "daily-diggest",
     }
 
-    for model in _models():
+    models = _models()
+    for i, model in enumerate(models, 1):
         payload = {
             "model": model,
             "messages": messages,
@@ -54,36 +55,46 @@ def call_llm(
         if require_json:
             payload["response_format"] = {"type": "json_object"}
 
+        print(f"[llm] try {i}/{len(models)}: {model} (timeout={REQUEST_TIMEOUT}s)", flush=True)
+        t0 = time.time()
         try:
             response = requests.post(
                 OPENROUTER_URL, headers=headers, json=payload, timeout=REQUEST_TIMEOUT
             )
         except Exception as e:
-            print(f"[llm] {model} request error: {e}", file=sys.stderr)
+            print(f"[llm] {model} request error after {time.time()-t0:.1f}s: {e}", flush=True)
             continue
+        elapsed = time.time() - t0
 
         if response.status_code == 429:
-            print(f"[llm] {model} rate-limited, trying next", file=sys.stderr)
+            print(f"[llm] {model} rate-limited after {elapsed:.1f}s, trying next", flush=True)
             time.sleep(1)
             continue
         if response.status_code >= 500:
-            print(f"[llm] {model} server error {response.status_code}, trying next", file=sys.stderr)
+            print(f"[llm] {model} server error {response.status_code} after {elapsed:.1f}s, trying next", flush=True)
             continue
         if response.status_code != 200:
             body = response.text[:200]
-            print(f"[llm] {model} status {response.status_code}: {body}", file=sys.stderr)
+            print(f"[llm] {model} status {response.status_code} after {elapsed:.1f}s: {body}", flush=True)
             continue
 
         try:
             data = response.json()
             content = data["choices"][0]["message"]["content"]
             if content and content.strip():
+                usage = data.get("usage", {})
+                print(
+                    f"[llm] {model} OK in {elapsed:.1f}s "
+                    f"(prompt={usage.get('prompt_tokens', '?')} completion={usage.get('completion_tokens', '?')})",
+                    flush=True,
+                )
                 return content
-            print(f"[llm] {model} returned empty content, trying next", file=sys.stderr)
+            print(f"[llm] {model} returned empty content after {elapsed:.1f}s, trying next", flush=True)
         except Exception as e:
-            print(f"[llm] {model} parse error: {e}", file=sys.stderr)
+            print(f"[llm] {model} parse error after {elapsed:.1f}s: {e}", flush=True)
             continue
 
+    print("[llm] all models failed", flush=True)
     return None
 
 
