@@ -31,13 +31,14 @@ def semantic_dedup(articles: list[dict]) -> list[dict]:
         return articles
 
     parsed = extract_json(response)
-    if not isinstance(parsed, dict) or "groups" not in parsed:
-        print("[semantic_dedup] unexpected LLM response, skipping", file=sys.stderr)
+    raw_groups = _extract_groups(parsed)
+    if raw_groups is None:
+        print(
+            f"[semantic_dedup] could not find groups in LLM response. Raw start: {response[:500]!r}",
+            flush=True,
+        )
         return articles
-
-    raw_groups = parsed["groups"]
-    if not isinstance(raw_groups, list):
-        return articles
+    print(f"[semantic_dedup] received {len(raw_groups)} groups from LLM", flush=True)
 
     n = len(articles)
     seen: set[int] = set()
@@ -64,6 +65,19 @@ def semantic_dedup(articles: list[dict]) -> list[dict]:
             merged.append(articles[i])
 
     return merged
+
+
+def _extract_groups(parsed) -> list | None:
+    if isinstance(parsed, list):
+        if all(isinstance(g, list) for g in parsed):
+            return parsed
+        return None
+    if isinstance(parsed, dict):
+        for key in ("groups", "clusters", "duplicates", "items", "result"):
+            v = parsed.get(key)
+            if isinstance(v, list):
+                return v
+    return None
 
 
 def _merge_group(group: list[dict]) -> dict:

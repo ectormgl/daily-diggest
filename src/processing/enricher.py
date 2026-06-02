@@ -44,12 +44,17 @@ def enrich_articles(articles: list[dict], limit: int = 25) -> list[dict]:
         return articles
 
     parsed = extract_json(response)
-    if not isinstance(parsed, dict) or "items" not in parsed:
-        print("[enricher] unexpected LLM response, skipping", file=sys.stderr)
+    items = _extract_items(parsed)
+    if items is None:
+        print(
+            f"[enricher] could not find items array in LLM response. Raw start: {response[:500]!r}",
+            flush=True,
+        )
         return articles
+    print(f"[enricher] received {len(items)} items from LLM", flush=True)
 
     by_id = {}
-    for item in parsed["items"]:
+    for item in items:
         if not isinstance(item, dict):
             continue
         try:
@@ -79,6 +84,20 @@ def enrich_articles(articles: list[dict], limit: int = 25) -> list[dict]:
 
     enriched.extend(articles[limit:])
     return enriched
+
+
+def _extract_items(parsed) -> list | None:
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        for key in ("items", "results", "articles", "data", "output", "enrichment"):
+            v = parsed.get(key)
+            if isinstance(v, list):
+                return v
+        # Single-item dict that looks like one article
+        if any(k in parsed for k in ("id", "summary", "topic", "importance")):
+            return [parsed]
+    return None
 
 
 def sort_by_importance(articles: list[dict]) -> list[dict]:

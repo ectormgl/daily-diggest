@@ -98,6 +98,13 @@ def call_llm(
 
 def extract_json(text: str):
     text = text.strip()
+    # Strip reasoning-model thinking blocks (nemotron, deepseek-r1, qwq, etc.)
+    while "<think>" in text and "</think>" in text:
+        start = text.find("<think>")
+        end = text.find("</think>", start)
+        if end == -1:
+            break
+        text = (text[:start] + text[end + len("</think>"):]).strip()
     if text.startswith("```"):
         first_nl = text.find("\n")
         if first_nl != -1:
