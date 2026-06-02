@@ -8,15 +8,10 @@ import requests
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 DEFAULT_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-chat-v3-0324:free",
-    "deepseek/deepseek-r1:free",
-    "google/gemma-3-27b-it:free",
-    "nvidia/llama-3.3-nemotron-super-49b-v1:free",
-    "meta-llama/llama-4-maverick:free",
-    "meta-llama/llama-4-scout:free",
-    "mistralai/mistral-small-3.2-24b-instruct:free",
-    "qwen/qwq-32b:free",
+    "moonshotai/kimi-k2.6:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-120b:free",
+    "poolside/laguna-xs.2:free",
 ]
 
 REQUEST_TIMEOUT = 60
