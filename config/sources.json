@@ -26,7 +26,6 @@
     {"url": "https://simonwillison.net/atom/everything/", "name": "Simon Willison", "priority": true},
     {"url": "https://magazine.sebastianraschka.com/feed", "name": "Ahead of AI", "priority": true},
     {"url": "https://thegradient.pub/rss/", "name": "The Gradient", "priority": false},
-    {"url": "https://importai.substack.com/feed", "name": "Import AI", "priority": true},
     {"url": "https://pytorch.org/blog/feed.xml", "name": "PyTorch Blog", "priority": false},
     {"url": "https://github.com/google/jax/releases.atom", "name": "JAX Releases", "priority": false},
     {"url": "https://paperswithcode.com/latest.rss", "name": "Papers With Code", "priority": true},
@@ -43,7 +42,6 @@
     {"url": "https://feeds.simplecast.com/54nAGcIl", "name": "Practical AI", "priority": false},
     {"url": "https://stability.ai/news?format=rss", "name": "Stability AI", "priority": false},
     {"url": "https://replicate.com/changelog/rss", "name": "Replicate Changelog", "priority": false},
-    {"url": "https://www.deeplearning.ai/the-batch/feed/", "name": "The Batch", "priority": true},
     {"url": "https://eugeneyan.com/rss/", "name": "Eugene Yan", "priority": false},
     {"url": "https://scale.com/blog/feed", "name": "Scale AI Blog", "priority": false},
     {"url": "https://research.google/blog/rss/", "name": "Google Research", "priority": true}

@@ -8,6 +8,7 @@ from dateutil import parser as dateparser
 
 REQUEST_TIMEOUT = 10
 MAX_WORKERS = 10
+MAX_ITEMS_PER_FEED = 30
 USER_AGENT = "daily-diggest/1.0 (+https://github.com/ectormgl/daily-diggest)"
 
 
@@ -25,7 +26,7 @@ def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
         response.raise_for_status()
         feed = feedparser.parse(response.content)
         articles = []
-        for entry in feed.get("entries", []):
+        for entry in feed.get("entries", [])[:MAX_ITEMS_PER_FEED]:
             title = entry.get("title", "").strip()
             if not title:
                 continue
