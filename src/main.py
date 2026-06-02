@@ -89,15 +89,12 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
         top_pool = semantic_dedup(top_pool)
         log(f"Semantic dedup done in {time.time()-t:.1f}s — {len(top_pool)} articles")
 
-        if os.getenv("ANTHROPIC_API_KEY"):
-            rerank_pool = _int_env("RERANK_POOL_SIZE", 30)
-            rerank_top_n = _int_env("RERANK_TOP_N", 10)
-            t = time.time()
-            log(f"Haiku re-rank: {min(rerank_pool, len(top_pool))} candidates -> top {rerank_top_n}")
-            top_pool = rerank(top_pool[:rerank_pool], top_n=rerank_top_n)
-            log(f"Re-rank done in {time.time()-t:.1f}s — {len(top_pool)} articles")
-        else:
-            log("ANTHROPIC_API_KEY not set — skipping Haiku re-rank.")
+        rerank_pool = _int_env("RERANK_POOL_SIZE", 30)
+        rerank_top_n = _int_env("RERANK_TOP_N", 10)
+        t = time.time()
+        log(f"Haiku re-rank: {min(rerank_pool, len(top_pool))} candidates -> top {rerank_top_n}")
+        top_pool = rerank(top_pool[:rerank_pool], top_n=rerank_top_n)
+        log(f"Re-rank done in {time.time()-t:.1f}s — {len(top_pool)} articles")
 
         enrich_limit = _int_env("LLM_ENRICH_LIMIT", 25)
         t = time.time()

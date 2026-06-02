@@ -30,6 +30,7 @@ def call_llm(
     temperature: float = 0.2,
     max_tokens: int = 2048,
     require_json: bool = False,
+    models: list[str] | None = None,
 ) -> str | None:
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
@@ -42,7 +43,8 @@ def call_llm(
         "X-Title": "daily-diggest",
     }
 
-    models = _models()
+    if models is None:
+        models = _models()
     for i, model in enumerate(models, 1):
         payload = {
             "model": model,

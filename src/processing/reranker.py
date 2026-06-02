@@ -1,11 +1,8 @@
 import os
-import time
 
-import requests
+from src.processing.llm_client import call_llm, extract_json
 
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
-REQUEST_TIMEOUT = 60
+DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
 
 SYSTEM_PROMPT = (
     "You are the editor of a daily AI/ML/software tech digest. "
@@ -22,12 +19,13 @@ SYSTEM_PROMPT = (
 
 
 def rerank(articles: list[dict], top_n: int = 10) -> list[dict]:
-    """LLM re-rank candidates with Claude Haiku, return the top_n most newsworthy."""
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key or not articles or len(articles) <= top_n:
+    """LLM re-rank candidates via OpenRouter (Haiku) and return the top_n most newsworthy."""
+    if not articles or len(articles) <= top_n:
         return articles[:top_n] if articles else articles
+    if not os.getenv("OPENROUTER_API_KEY"):
+        return articles[:top_n]
 
-    model = os.getenv("ANTHROPIC_RERANK_MODEL", DEFAULT_MODEL)
+    model = os.getenv("RERANK_MODEL", DEFAULT_MODEL)
 
     lines = []
     for i, a in enumerate(articles, start=1):
@@ -37,46 +35,21 @@ def rerank(articles: list[dict], top_n: int = 10) -> list[dict]:
         lines.append(f"id={i} | source={source}\n  title: {title}\n  blurb: {blurb}")
     user_msg = "\n\n".join(lines)
 
-    headers = {
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": model,
-        "max_tokens": 1024,
-        "system": SYSTEM_PROMPT.replace("{top_n}", str(top_n)),
-        "messages": [{"role": "user", "content": user_msg}],
-    }
-
-    print(f"[rerank] sending {len(articles)} candidates to {model} for top-{top_n}", flush=True)
-    t0 = time.time()
-    try:
-        resp = requests.post(ANTHROPIC_URL, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
-    except Exception as e:
-        print(f"[rerank] request error: {e}", flush=True)
+    response = call_llm(
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT.replace("{top_n}", str(top_n))},
+            {"role": "user", "content": user_msg},
+        ],
+        temperature=0.2,
+        max_tokens=1024,
+        require_json=True,
+        models=[model],
+    )
+    if not response:
+        print("[rerank] LLM call failed; falling back to score order", flush=True)
         return articles[:top_n]
 
-    if resp.status_code != 200:
-        print(f"[rerank] status {resp.status_code}: {resp.text[:200]}", flush=True)
-        return articles[:top_n]
-
-    try:
-        data = resp.json()
-        text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
-        usage = data.get("usage", {})
-        print(
-            f"[rerank] OK in {time.time()-t0:.1f}s "
-            f"(input={usage.get('input_tokens', '?')} output={usage.get('output_tokens', '?')})",
-            flush=True,
-        )
-    except Exception as e:
-        print(f"[rerank] parse error: {e}", flush=True)
-        return articles[:top_n]
-
-    from src.processing.llm_client import extract_json
-
-    parsed = extract_json(text)
+    parsed = extract_json(response)
     picks = None
     if isinstance(parsed, dict):
         for k in ("picks", "items", "results"):
@@ -87,7 +60,7 @@ def rerank(articles: list[dict], top_n: int = 10) -> list[dict]:
         picks = parsed
 
     if not picks:
-        print(f"[rerank] could not parse picks; raw start: {text[:300]!r}", flush=True)
+        print(f"[rerank] could not parse picks; raw start: {response[:300]!r}", flush=True)
         return articles[:top_n]
 
     selected: list[dict] = []
