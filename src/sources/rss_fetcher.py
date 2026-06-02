@@ -1,11 +1,24 @@
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import feedparser
-from datetime import datetime, timezone
+import requests
 from dateutil import parser as dateparser
+
+REQUEST_TIMEOUT = 10
+MAX_WORKERS = 10
+USER_AGENT = "daily-diggest/1.0 (+https://github.com/ectormgl/daily-diggest)"
 
 
 def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
     try:
-        feed = feedparser.parse(url)
+        response = requests.get(
+            url,
+            timeout=REQUEST_TIMEOUT,
+            headers={"User-Agent": USER_AGENT, "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8"},
+        )
+        response.raise_for_status()
+        feed = feedparser.parse(response.content)
         articles = []
         for entry in feed.get("entries", []):
             title = entry.get("title", "").strip()
@@ -30,14 +43,17 @@ def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
             })
         return articles
     except Exception as e:
-        import sys
         print(f"[rss_fetcher] Failed to fetch {url}: {e}", file=sys.stderr)
         return []
 
 
 def fetch_all_feeds(sources: list[dict]) -> list[dict]:
     all_articles = []
-    for source in sources:
-        articles = fetch_feed(source["url"], source["name"], source.get("priority", False))
-        all_articles.extend(articles)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [
+            executor.submit(fetch_feed, s["url"], s["name"], s.get("priority", False))
+            for s in sources
+        ]
+        for future in as_completed(futures):
+            all_articles.extend(future.result())
     return all_articles

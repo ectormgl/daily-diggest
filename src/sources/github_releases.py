@@ -1,8 +1,11 @@
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import requests
 from dateutil import parser as dateparser
 
 GITHUB_API = "https://api.github.com"
+MAX_WORKERS = 8
 
 
 def fetch_repo_releases(owner: str, repo: str, token: str | None, max_releases: int = 3) -> list[dict]:
@@ -44,7 +47,11 @@ def fetch_repo_releases(owner: str, repo: str, token: str | None, max_releases: 
 
 def fetch_all_releases(repos: list[dict], token: str | None) -> list[dict]:
     all_articles = []
-    for repo in repos:
-        articles = fetch_repo_releases(repo["owner"], repo["repo"], token)
-        all_articles.extend(articles)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [
+            executor.submit(fetch_repo_releases, r["owner"], r["repo"], token)
+            for r in repos
+        ]
+        for future in as_completed(futures):
+            all_articles.extend(future.result())
     return all_articles
