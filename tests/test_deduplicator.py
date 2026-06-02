@@ -43,11 +43,11 @@ def test_deduplicate_keeps_multi_source_flag():
 
 def test_deduplicate_unique_articles_unchanged():
     articles = [
-        {"title": "Article A about AI", "source": "S1", "source_type": "rss", "priority": False},
-        {"title": "Article B about robots", "source": "S2", "source_type": "rss", "priority": False},
-        {"title": "Article C about quantum", "source": "S3", "source_type": "rss", "priority": False},
+        {"title": "GPT-5 released by OpenAI with multimodal capabilities", "source": "S1", "source_type": "rss", "priority": False},
+        {"title": "Apple launches M4 MacBook Pro with 40-hour battery", "source": "S2", "source_type": "rss", "priority": False},
+        {"title": "Quantum computing breakthrough achieved at MIT", "source": "S3", "source_type": "rss", "priority": False},
     ]
-    result = deduplicate(articles, threshold=0.8)
+    result = deduplicate(articles, threshold=0.7)
     assert len(result) == 3
     for article in result:
         assert article["multi_source"] is False
