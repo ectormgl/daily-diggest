@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 from src.sources.rss_fetcher import fetch_all_feeds
@@ -52,15 +53,27 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
     whatsapp_recipient = os.getenv("WHATSAPP_RECIPIENT_NUMBER")
 
     print("Delivering digest...")
-    send_digest(ranked, webhook_url=discord_webhook)
-    send_telegram_digest(ranked, bot_token=telegram_token, chat_id=telegram_chat_id)
-    send_whatsapp_digest(
-        ranked,
-        api_url=evolution_api_url,
-        instance=evolution_instance,
-        api_key=evolution_api_key,
-        recipient_number=whatsapp_recipient,
-    )
+    try:
+        send_digest(ranked, webhook_url=discord_webhook)
+    except Exception as e:
+        print(f"[main] Discord delivery failed: {e}", file=sys.stderr)
+
+    try:
+        send_telegram_digest(ranked, bot_token=telegram_token, chat_id=telegram_chat_id)
+    except Exception as e:
+        print(f"[main] Telegram delivery failed: {e}", file=sys.stderr)
+
+    try:
+        send_whatsapp_digest(
+            ranked,
+            api_url=evolution_api_url,
+            instance=evolution_instance,
+            api_key=evolution_api_key,
+            recipient_number=whatsapp_recipient,
+        )
+    except Exception as e:
+        print(f"[main] WhatsApp delivery failed: {e}", file=sys.stderr)
+
     print("Done.")
 
     return ranked
