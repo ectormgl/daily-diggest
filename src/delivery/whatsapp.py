@@ -2,6 +2,8 @@ import sys
 import requests
 from datetime import date
 
+from src.delivery.text_utils import article_summary
+
 MAX_WHATSAPP_CHARS = 4000
 TOPIC_ORDER = ["Models", "Tools", "Research", "Industry", "Other"]
 
@@ -30,7 +32,7 @@ def format_whatsapp(articles: list[dict], max_articles: int = 25) -> str:
             title = article["title"]
             url = article["url"]
             source = article["source"]
-            summary = (article.get("llm_summary") or article.get("summary", ""))[:280]
+            summary = article_summary(article)
             line = (
                 f"*{i}. {title}*{multi}{imp_tag}\n"
                 f"{url}\n"

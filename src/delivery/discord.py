@@ -1,6 +1,8 @@
 import requests
 from datetime import date
 
+from src.delivery.text_utils import article_summary
+
 MAX_DISCORD_CHARS = 1900
 TOPIC_ORDER = ["Models", "Tools", "Research", "Industry", "Other"]
 
@@ -26,7 +28,7 @@ def format_digest(articles: list[dict], max_articles: int = 25) -> str:
             multi = " 🔥" if article.get("multi_source") else ""
             imp = article.get("importance")
             imp_tag = f" `{imp:.0f}/10`" if isinstance(imp, (int, float)) else ""
-            summary = (article.get("llm_summary") or article.get("summary", ""))[:280]
+            summary = article_summary(article)
             line = (
                 f"**{i}. [{article['title']}]({article['url']})**{multi}{imp_tag}\n"
                 f"> {summary}\n"

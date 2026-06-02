@@ -1,6 +1,8 @@
 import requests
 from datetime import date
 
+from src.delivery.text_utils import article_summary
+
 TELEGRAM_API = "https://api.telegram.org"
 MAX_TELEGRAM_CHARS = 4000
 TOPIC_ORDER = ["Models", "Tools", "Research", "Industry", "Other"]
@@ -34,7 +36,7 @@ def _format_telegram(articles: list[dict], max_articles: int = 25) -> str:
             title = _esc(article["title"])
             url = article["url"]
             source = _esc(article["source"])
-            summary = _esc((article.get("llm_summary") or article.get("summary", ""))[:280])
+            summary = _esc(article_summary(article))
             line = (
                 f'<b>{i}. <a href="{url}">{title}</a></b>{multi}{imp_tag}\n'
                 f"<i>{summary}</i>\n"
