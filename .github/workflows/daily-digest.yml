@@ -1,0 +1,81 @@
+name: Daily Tech Digest
+
+on:
+  schedule:
+    # Runs every day at 9:00 AM UTC (adjust to your timezone)
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+    # Allows manual trigger from GitHub UI
+    inputs:
+      dry_run:
+        description: "Dry run (fetch only, no delivery)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  digest:
+    name: Generate and Deliver Digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -v --tb=short
+
+      - name: Run digest
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EVOLUTION_API_URL: ${{ secrets.EVOLUTION_API_URL }}
+          EVOLUTION_INSTANCE: ${{ secrets.EVOLUTION_INSTANCE }}
+          EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
+          WHATSAPP_RECIPIENT_NUMBER: ${{ secrets.WHATSAPP_RECIPIENT_NUMBER }}
+        run: python -m src.main
+
+      - name: Dry run (fetch + report only)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+        run: |
+          python -c "
+          import json, os, sys
+          sys.path.insert(0, '.')
+          from src.main import load_sources
+          from src.sources.rss_fetcher import fetch_all_feeds
+          from src.sources.github_releases import fetch_all_releases
+          from src.sources.brave_search import fetch_all_searches
+          from src.processing.deduplicator import deduplicate
+          from src.processing.scorer import sort_by_score
+          sources = load_sources()
+          articles = (
+              fetch_all_feeds(sources['rss_feeds'])
+              + fetch_all_releases(sources['github_repos'], token=os.getenv('GITHUB_TOKEN'))
+              + fetch_all_searches(sources['search_queries'], api_key=os.getenv('BRAVE_API_KEY'))
+          )
+          deduped = deduplicate(articles)
+          ranked = sort_by_score(deduped)
+          print(f'Would deliver {len(ranked)} articles')
+          for a in ranked[:10]:
+              print(f'  [{a[\"title\"]}] sources={a[\"source_count\"]}')
+          "
