@@ -22,7 +22,7 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
     sources = load_sources(config_path)
 
     brave_api_key = os.getenv("BRAVE_API_KEY")
-    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
     print("Fetching RSS feeds...")
     rss_articles = fetch_all_feeds(sources["rss_feeds"])
@@ -41,7 +41,7 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
     ranked = sort_by_score(deduplicated)
 
     print("Filtering with LLM...")
-    ranked = filter_with_llm(ranked, api_key=anthropic_api_key)
+    ranked = filter_with_llm(ranked, api_key=openrouter_api_key)
     print(f"Total after LLM filter: {len(ranked)}")
 
     discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")

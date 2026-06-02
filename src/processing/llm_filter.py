@@ -4,8 +4,8 @@ import sys
 
 import requests
 
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-MODEL = "claude-haiku-4-5-20251001"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL = "anthropic/claude-haiku-4.5"
 
 RELEVANCE_PROMPT = """You are curating a daily digest for an AI/ML engineer.
 
@@ -41,11 +41,10 @@ def filter_with_llm(
 
     try:
         response = requests.post(
-            ANTHROPIC_API_URL,
+            OPENROUTER_API_URL,
             headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
             },
             json={
                 "model": MODEL,
@@ -56,7 +55,7 @@ def filter_with_llm(
         )
         response.raise_for_status()
         data = response.json()
-        text = data["content"][0]["text"].strip()
+        text = data["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):
             text = text.strip("`")
             if text.startswith("json"):
