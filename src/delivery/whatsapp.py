@@ -2,20 +2,44 @@ import sys
 import requests
 from datetime import date
 
+from src.delivery.text_utils import article_summary
+
 MAX_WHATSAPP_CHARS = 4000
+TOPIC_ORDER = ["Models", "Tools", "Research", "Industry", "Other"]
 
 
-def format_whatsapp(articles: list[dict], max_articles: int = 20) -> str:
+def _group_by_topic(articles: list[dict]) -> dict:
+    groups: dict[str, list[dict]] = {}
+    for a in articles:
+        groups.setdefault(a.get("topic", "Other"), []).append(a)
+    return groups
+
+
+def format_whatsapp(articles: list[dict], max_articles: int = 25) -> str:
     today = date.today().strftime("%Y-%m-%d")
     lines = [f"*Daily Tech Digest — {today}*\n"]
-    for i, article in enumerate(articles[:max_articles]):
-        multi = " 🔥 _(multi-source)_" if article.get("multi_source") else ""
-        title = article["title"]
-        url = article["url"]
-        source = article["source"]
-        summary = article.get("summary", "")[:200]
-        line = f"*{i+1}. {title}*{multi}\n{url}\n_{summary}_\nSource: {source}\n"
-        lines.append(line)
+    items = articles[:max_articles]
+    grouped = _group_by_topic(items)
+    topics = [t for t in TOPIC_ORDER if t in grouped] + [t for t in grouped if t not in TOPIC_ORDER]
+    i = 0
+    for topic in topics:
+        lines.append(f"\n*— {topic} —*")
+        for article in grouped[topic]:
+            i += 1
+            multi = " 🔥" if article.get("multi_source") else ""
+            imp = article.get("importance")
+            imp_tag = f" [{imp:.0f}/10]" if isinstance(imp, (int, float)) else ""
+            title = article["title"]
+            url = article["url"]
+            source = article["source"]
+            summary = article_summary(article)
+            line = (
+                f"*{i}. {title}*{multi}{imp_tag}\n"
+                f"{url}\n"
+                f"_{summary}_\n"
+                f"Source: {source}\n"
+            )
+            lines.append(line)
     return "\n".join(lines)
 
 
@@ -42,18 +66,11 @@ def send_whatsapp_digest(
         return
 
     endpoint = f"{api_url.rstrip('/')}/message/sendText/{instance}"
-    headers = {
-        "Content-Type": "application/json",
-        "apikey": api_key,
-    }
+    headers = {"Content-Type": "application/json", "apikey": api_key}
 
     message = format_whatsapp(articles)
     for chunk in _chunk(message):
-        payload = {
-            "number": recipient_number,
-            "text": chunk,
-            "linkPreview": True,
-        }
+        payload = {"number": recipient_number, "text": chunk, "linkPreview": True}
         try:
             response = requests.post(endpoint, headers=headers, json=payload, timeout=15)
             response.raise_for_status()

@@ -1,21 +1,48 @@
 import requests
 from datetime import date
 
+from src.delivery.text_utils import article_summary
+
 TELEGRAM_API = "https://api.telegram.org"
-MAX_TELEGRAM_CHARS = 4000  # Telegram limit is 4096
+MAX_TELEGRAM_CHARS = 4000
+TOPIC_ORDER = ["Models", "Tools", "Research", "Industry", "Other"]
 
 
-def _format_telegram(articles: list[dict], max_articles: int = 20) -> str:
+def _esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _group_by_topic(articles: list[dict]) -> dict:
+    groups: dict[str, list[dict]] = {}
+    for a in articles:
+        groups.setdefault(a.get("topic", "Other"), []).append(a)
+    return groups
+
+
+def _format_telegram(articles: list[dict], max_articles: int = 25) -> str:
     today = date.today().strftime("%Y-%m-%d")
     lines = [f"<b>Daily Tech Digest — {today}</b>\n"]
-    for i, article in enumerate(articles[:max_articles]):
-        multi = " 🔥" if article.get("multi_source") else ""
-        title = article["title"].replace("<", "&lt;").replace(">", "&gt;")
-        url = article["url"]
-        source = article["source"].replace("<", "&lt;")
-        summary = article.get("summary", "")[:200].replace("<", "&lt;").replace(">", "&gt;")
-        line = f'<b>{i+1}. <a href="{url}">{title}</a></b>{multi}\n<i>{summary}</i>\n<code>{source}</code>\n'
-        lines.append(line)
+    items = articles[:max_articles]
+    grouped = _group_by_topic(items)
+    topics = [t for t in TOPIC_ORDER if t in grouped] + [t for t in grouped if t not in TOPIC_ORDER]
+    i = 0
+    for topic in topics:
+        lines.append(f"\n<b>— {_esc(topic)} —</b>")
+        for article in grouped[topic]:
+            i += 1
+            multi = " 🔥" if article.get("multi_source") else ""
+            imp = article.get("importance")
+            imp_tag = f" [{imp:.0f}/10]" if isinstance(imp, (int, float)) else ""
+            title = _esc(article["title"])
+            url = article["url"]
+            source = _esc(article["source"])
+            summary = _esc(article_summary(article))
+            line = (
+                f'<b>{i}. <a href="{url}">{title}</a></b>{multi}{imp_tag}\n'
+                f"<i>{summary}</i>\n"
+                f"<code>{source}</code>\n"
+            )
+            lines.append(line)
     return "\n".join(lines)
 
 

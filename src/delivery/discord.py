@@ -1,16 +1,40 @@
 import requests
 from datetime import date
 
-MAX_DISCORD_CHARS = 1900  # Discord limit is 2000, keep buffer
+from src.delivery.text_utils import article_summary
+
+MAX_DISCORD_CHARS = 1900
+TOPIC_ORDER = ["Models", "Tools", "Research", "Industry", "Other"]
 
 
-def format_digest(articles: list[dict], max_articles: int = 20) -> str:
+def _group_by_topic(articles: list[dict]) -> dict:
+    groups: dict[str, list[dict]] = {}
+    for a in articles:
+        groups.setdefault(a.get("topic", "Other"), []).append(a)
+    return groups
+
+
+def format_digest(articles: list[dict], max_articles: int = 25) -> str:
     today = date.today().strftime("%Y-%m-%d")
     lines = [f"**Daily Tech Digest — {today}**\n"]
-    for i, article in enumerate(articles[:max_articles]):
-        multi = " 🔥 *(multi-source)*" if article.get("multi_source") else ""
-        line = f"**{i+1}. [{article['title']}]({article['url']})**{multi}\n> {article.get('summary', '')[:200]}\n*Source: {article['source']}*\n"
-        lines.append(line)
+    items = articles[:max_articles]
+    grouped = _group_by_topic(items)
+    topics = [t for t in TOPIC_ORDER if t in grouped] + [t for t in grouped if t not in TOPIC_ORDER]
+    i = 0
+    for topic in topics:
+        lines.append(f"\n__**{topic}**__")
+        for article in grouped[topic]:
+            i += 1
+            multi = " 🔥" if article.get("multi_source") else ""
+            imp = article.get("importance")
+            imp_tag = f" `{imp:.0f}/10`" if isinstance(imp, (int, float)) else ""
+            summary = article_summary(article)
+            line = (
+                f"**{i}. [{article['title']}]({article['url']})**{multi}{imp_tag}\n"
+                f"> {summary}\n"
+                f"*Source: {article['source']}*\n"
+            )
+            lines.append(line)
     return "\n".join(lines)
 
 

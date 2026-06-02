@@ -41,6 +41,7 @@ jobs:
       - name: Run digest
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
+          PYTHONUNBUFFERED: "1"
           GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -50,6 +51,9 @@ jobs:
           EVOLUTION_INSTANCE: ${{ secrets.EVOLUTION_INSTANCE }}
           EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
           WHATSAPP_RECIPIENT_NUMBER: ${{ secrets.WHATSAPP_RECIPIENT_NUMBER }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS }}
+          MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE }}
         run: python -m src.main
 
       - name: Dry run (fetch + report only)
