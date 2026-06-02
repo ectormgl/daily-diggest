@@ -25,7 +25,7 @@ def rerank(articles: list[dict], top_n: int = 10) -> list[dict]:
     if not os.getenv("OPENROUTER_API_KEY"):
         return articles[:top_n]
 
-    model = os.getenv("RERANK_MODEL", DEFAULT_MODEL)
+    model = os.getenv("RERANK_MODEL") or DEFAULT_MODEL
 
     lines = []
     for i, a in enumerate(articles, start=1):
