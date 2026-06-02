@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 
 from src.sources.rss_fetcher import fetch_all_feeds
-from src.sources.github_releases import fetch_all_releases
 from src.sources.brave_search import fetch_all_searches
 from src.processing.deduplicator import deduplicate
 from src.processing.scorer import sort_by_score
+from src.processing.llm_filter import filter_with_llm
 from src.delivery.discord import send_digest
 from src.delivery.telegram import send_telegram_digest
 from src.delivery.whatsapp import send_whatsapp_digest
@@ -21,28 +21,28 @@ def load_sources(config_path: str = "config/sources.json") -> dict:
 def run_digest(config_path: str = "config/sources.json") -> list[dict]:
     sources = load_sources(config_path)
 
-    github_token = os.getenv("GITHUB_TOKEN")
     brave_api_key = os.getenv("BRAVE_API_KEY")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 
     print("Fetching RSS feeds...")
     rss_articles = fetch_all_feeds(sources["rss_feeds"])
     print(f"  Got {len(rss_articles)} RSS articles")
 
-    print("Fetching GitHub releases...")
-    gh_articles = fetch_all_releases(sources["github_repos"], token=github_token)
-    print(f"  Got {len(gh_articles)} GitHub release articles")
-
     print("Fetching Brave Search results...")
     search_articles = fetch_all_searches(sources["search_queries"], api_key=brave_api_key)
     print(f"  Got {len(search_articles)} search articles")
 
-    all_articles = rss_articles + gh_articles + search_articles
+    all_articles = rss_articles + search_articles
     print(f"Total before dedup: {len(all_articles)}")
 
     deduplicated = deduplicate(all_articles, threshold=0.75)
     print(f"Total after dedup: {len(deduplicated)}")
 
     ranked = sort_by_score(deduplicated)
+
+    print("Filtering with LLM...")
+    ranked = filter_with_llm(ranked, api_key=anthropic_api_key)
+    print(f"Total after LLM filter: {len(ranked)}")
 
     discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
     telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
