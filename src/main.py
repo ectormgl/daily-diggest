@@ -21,6 +21,28 @@ def log(msg: str) -> None:
     print(f"[{ts}] {msg}", flush=True)
 
 
+def _int_env(name: str, default: int) -> int:
+    v = os.getenv(name)
+    if v is None or v.strip() == "":
+        return default
+    try:
+        return int(v)
+    except ValueError:
+        log(f"WARN: {name}={v!r} is not an int, using default {default}")
+        return default
+
+
+def _float_env(name: str, default: float) -> float:
+    v = os.getenv(name)
+    if v is None or v.strip() == "":
+        return default
+    try:
+        return float(v)
+    except ValueError:
+        log(f"WARN: {name}={v!r} is not a float, using default {default}")
+        return default
+
+
 def load_sources(config_path: str = "config/sources.json") -> dict:
     with open(config_path) as f:
         return json.load(f)
@@ -63,7 +85,7 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
 
     ranked = sort_by_score(deduplicated)
 
-    pool_size = int(os.getenv("LLM_POOL_SIZE", "40"))
+    pool_size = _int_env("LLM_POOL_SIZE", 40)
     top_pool = ranked[:pool_size]
     log(f"Kept top {len(top_pool)} for further processing (pool size = {pool_size})")
 
@@ -74,13 +96,13 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
         top_pool = semantic_dedup(top_pool)
         log(f"Semantic dedup done in {time.time()-t:.1f}s — {len(top_pool)} articles")
 
-        enrich_limit = int(os.getenv("LLM_ENRICH_LIMIT", "25"))
+        enrich_limit = _int_env("LLM_ENRICH_LIMIT", 25)
         t = time.time()
         log(f"LLM enrichment: summarizing/scoring top {min(enrich_limit, len(top_pool))}...")
         top_pool = enrich_articles(top_pool, limit=enrich_limit)
         log(f"Enrichment done in {time.time()-t:.1f}s")
 
-        min_importance = float(os.getenv("MIN_IMPORTANCE", "3"))
+        min_importance = _float_env("MIN_IMPORTANCE", 3.0)
         before = len(top_pool)
         top_pool = filter_by_importance(top_pool, min_score=min_importance)
         log(f"Filtered by importance >= {min_importance}: {before} -> {len(top_pool)}")

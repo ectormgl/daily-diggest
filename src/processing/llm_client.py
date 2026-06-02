@@ -9,11 +9,14 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 DEFAULT_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-2.0-flash-exp:free",
-    "deepseek/deepseek-chat-v3.1:free",
-    "qwen/qwen-2.5-72b-instruct:free",
-    "meta-llama/llama-3.1-70b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "deepseek/deepseek-r1:free",
+    "google/gemma-3-27b-it:free",
+    "nvidia/llama-3.3-nemotron-super-49b-v1:free",
+    "meta-llama/llama-4-maverick:free",
+    "meta-llama/llama-4-scout:free",
+    "mistralai/mistral-small-3.2-24b-instruct:free",
+    "qwen/qwq-32b:free",
 ]
 
 REQUEST_TIMEOUT = 60
