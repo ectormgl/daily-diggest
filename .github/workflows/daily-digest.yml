@@ -53,33 +53,30 @@ jobs:
           WHATSAPP_RECIPIENT_NUMBER: ${{ secrets.WHATSAPP_RECIPIENT_NUMBER }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS }}
+          RERANK_MODEL: ${{ vars.RERANK_MODEL }}
+          RERANK_POOL_SIZE: ${{ vars.RERANK_POOL_SIZE }}
+          RERANK_TOP_N: ${{ vars.RERANK_TOP_N }}
           MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE }}
         run: python -m src.main
 
-      - name: Dry run (fetch + report only)
+      - name: Dry run (fetch + rerank, no delivery)
         if: ${{ github.event.inputs.dry_run == 'true' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.DIGEST_GITHUB_TOKEN }}
+          PYTHONUNBUFFERED: "1"
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS }}
+          RERANK_MODEL: ${{ vars.RERANK_MODEL }}
+          RERANK_POOL_SIZE: ${{ vars.RERANK_POOL_SIZE }}
+          RERANK_TOP_N: ${{ vars.RERANK_TOP_N }}
+          MIN_IMPORTANCE: ${{ vars.MIN_IMPORTANCE }}
         run: |
           python -c "
-          import json, os, sys
-          sys.path.insert(0, '.')
-          from src.main import load_sources
-          from src.sources.rss_fetcher import fetch_all_feeds
-          from src.sources.github_releases import fetch_all_releases
-          from src.sources.brave_search import fetch_all_searches
-          from src.processing.deduplicator import deduplicate
-          from src.processing.scorer import sort_by_score
-          sources = load_sources()
-          articles = (
-              fetch_all_feeds(sources['rss_feeds'])
-              + fetch_all_releases(sources['github_repos'], token=os.getenv('GITHUB_TOKEN'))
-              + fetch_all_searches(sources['search_queries'], api_key=os.getenv('BRAVE_API_KEY'))
-          )
-          deduped = deduplicate(articles)
-          ranked = sort_by_score(deduped)
-          print(f'Would deliver {len(ranked)} articles')
-          for a in ranked[:10]:
-              print(f'  [{a[\"title\"]}] sources={a[\"source_count\"]}')
+          from src.main import run_digest
+          articles = run_digest()
+          print(f'\n=== Final {len(articles)} articles ===')
+          for a in articles:
+              imp = a.get('importance', '?')
+              rr = a.get('rerank_score', '?')
+              print(f'  imp={imp} rerank={rr} | {a[\"title\"]}')
           "
