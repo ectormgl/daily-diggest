@@ -12,10 +12,12 @@ def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
             if not title:
                 continue
             published_raw = entry.get("published") or entry.get("updated") or ""
-            try:
-                published_dt = dateparser.parse(published_raw)
-            except Exception:
-                published_dt = None
+            published_dt = None
+            if published_raw:
+                try:
+                    published_dt = dateparser.parse(published_raw)
+                except Exception:
+                    pass
             articles.append({
                 "title": title,
                 "url": entry.get("link", ""),
@@ -27,7 +29,9 @@ def fetch_feed(url: str, name: str, priority: bool) -> list[dict]:
                 "engagement": 0,
             })
         return articles
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f"[rss_fetcher] Failed to fetch {url}: {e}", file=sys.stderr)
         return []
 
 
