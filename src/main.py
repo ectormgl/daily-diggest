@@ -5,11 +5,11 @@ import time
 from datetime import datetime
 
 from src.sources.rss_fetcher import fetch_all_feeds
-from src.sources.github_releases import fetch_all_releases
 from src.sources.brave_search import fetch_all_searches
 from src.processing.deduplicator import deduplicate
 from src.processing.scorer import sort_by_score
 from src.processing.semantic_dedup import semantic_dedup
+from src.processing.reranker import rerank
 from src.processing.enricher import enrich_articles, sort_by_importance, filter_by_importance
 from src.delivery.discord import send_digest
 from src.delivery.telegram import send_telegram_digest
@@ -53,13 +53,11 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
     sources = load_sources(config_path)
     log(
         f"Loaded sources: {len(sources['rss_feeds'])} RSS feeds, "
-        f"{len(sources['github_repos'])} GitHub repos, "
         f"{len(sources['search_queries'])} search queries"
     )
 
-    github_token = os.getenv("GITHUB_TOKEN")
     brave_api_key = os.getenv("BRAVE_API_KEY")
-    log(f"Env: github_token={'set' if github_token else 'MISSING'}, brave_key={'set' if brave_api_key else 'MISSING'}")
+    log(f"Env: brave_key={'set' if brave_api_key else 'MISSING'}")
 
     t = time.time()
     log(f"Fetching {len(sources['rss_feeds'])} RSS feeds (parallel)...")
@@ -67,16 +65,11 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
     log(f"RSS done in {time.time()-t:.1f}s — {len(rss_articles)} articles")
 
     t = time.time()
-    log(f"Fetching {len(sources['github_repos'])} GitHub release feeds (parallel)...")
-    gh_articles = fetch_all_releases(sources["github_repos"], token=github_token)
-    log(f"GitHub releases done in {time.time()-t:.1f}s — {len(gh_articles)} articles")
-
-    t = time.time()
     log(f"Fetching {len(sources['search_queries'])} Brave Search queries...")
     search_articles = fetch_all_searches(sources["search_queries"], api_key=brave_api_key)
     log(f"Brave Search done in {time.time()-t:.1f}s — {len(search_articles)} articles")
 
-    all_articles = rss_articles + gh_articles + search_articles
+    all_articles = rss_articles + search_articles
     log(f"Total before dedup: {len(all_articles)}")
 
     t = time.time()
@@ -95,6 +88,16 @@ def run_digest(config_path: str = "config/sources.json") -> list[dict]:
         log(f"LLM semantic dedup: sending {len(top_pool)} titles to OpenRouter...")
         top_pool = semantic_dedup(top_pool)
         log(f"Semantic dedup done in {time.time()-t:.1f}s — {len(top_pool)} articles")
+
+        if os.getenv("ANTHROPIC_API_KEY"):
+            rerank_pool = _int_env("RERANK_POOL_SIZE", 30)
+            rerank_top_n = _int_env("RERANK_TOP_N", 10)
+            t = time.time()
+            log(f"Haiku re-rank: {min(rerank_pool, len(top_pool))} candidates -> top {rerank_top_n}")
+            top_pool = rerank(top_pool[:rerank_pool], top_n=rerank_top_n)
+            log(f"Re-rank done in {time.time()-t:.1f}s — {len(top_pool)} articles")
+        else:
+            log("ANTHROPIC_API_KEY not set — skipping Haiku re-rank.")
 
         enrich_limit = _int_env("LLM_ENRICH_LIMIT", 25)
         t = time.time()

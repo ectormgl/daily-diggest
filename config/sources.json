@@ -46,27 +46,6 @@
     {"url": "https://scale.com/blog/feed", "name": "Scale AI Blog", "priority": false},
     {"url": "https://research.google/blog/rss/", "name": "Google Research", "priority": true}
   ],
-  "github_repos": [
-    {"owner": "vllm-project", "repo": "vllm"},
-    {"owner": "langchain-ai", "repo": "langchain"},
-    {"owner": "ollama", "repo": "ollama"},
-    {"owner": "mudler", "repo": "LocalAI"},
-    {"owner": "langgenius", "repo": "dify"},
-    {"owner": "microsoft", "repo": "autogen"},
-    {"owner": "microsoft", "repo": "promptflow"},
-    {"owner": "openai", "repo": "openai-python"},
-    {"owner": "anthropics", "repo": "anthropic-sdk-python"},
-    {"owner": "huggingface", "repo": "transformers"},
-    {"owner": "ggerganov", "repo": "llama.cpp"},
-    {"owner": "run-llama", "repo": "llama_index"},
-    {"owner": "chroma-core", "repo": "chroma"},
-    {"owner": "milvus-io", "repo": "milvus"},
-    {"owner": "BerriAI", "repo": "litellm"},
-    {"owner": "commaai", "repo": "openpilot"},
-    {"owner": "unslothai", "repo": "unsloth"},
-    {"owner": "pytorch", "repo": "pytorch"},
-    {"owner": "openai", "repo": "whisper"}
-  ],
   "search_queries": [
     "AI large language model release 2024",
     "open source AI tool launch",
